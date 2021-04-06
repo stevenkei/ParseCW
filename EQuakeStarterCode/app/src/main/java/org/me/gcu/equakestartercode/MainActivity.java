@@ -14,10 +14,15 @@ import android.widget.TextView;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.StringReader;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.LinkedList;
 
 import org.me.gcu.equakestartercode.R;
+import org.xmlpull.v1.XmlPullParser;
+import org.xmlpull.v1.XmlPullParserException;
+import org.xmlpull.v1.XmlPullParserFactory;
 
 public class MainActivity extends AppCompatActivity implements OnClickListener
 {
@@ -30,13 +35,36 @@ public class MainActivity extends AppCompatActivity implements OnClickListener
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
+        LinkedList <WidgetClass> alist = null;
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        //Make call to parsing code
+        //Note this is not the best location
+        alist = parseData(urlSource);
+
         Log.e("MyTag","in onCreate");
+
+        // Write list to Log for testing
+        if (alist != null)
+        {
+            Log.e("MyTag","List not null");
+            for (Object o : alist)
+            {
+                Log.e("MyTag",o.toString());
+            }
+        }
+        else
+        {
+            Log.e("MyTag","List is null");
+        }
+
         // Set up the raw links to the graphical components
-        rawDataDisplay = (TextView)findViewById(R.id.rawDataDisplay);
+        //rawDataDisplay = (TextView)findViewById(R.id.rawDataDisplay);
         startButton = (Button)findViewById(R.id.startButton);
         startButton.setOnClickListener(this);
+
         Log.e("MyTag","after startButton");
         // More Code goes here
     }
@@ -53,6 +81,114 @@ public class MainActivity extends AppCompatActivity implements OnClickListener
         // Run network access on a separate thread;
         new Thread(new Task(urlSource)).start();
     } //
+
+    //LinkedList for Earthquakes
+    private LinkedList<WidgetClass> parseData(String dataToParse)
+    {
+        WidgetClass widget = null;
+        LinkedList <WidgetClass> alist = null;
+        try
+        {
+            XmlPullParserFactory factory = XmlPullParserFactory.newInstance();
+            factory.setNamespaceAware(true);
+            XmlPullParser xpp = factory.newPullParser();
+            xpp.setInput( new StringReader( dataToParse ) );
+            int eventType = xpp.getEventType();
+            while (eventType != XmlPullParser.END_DOCUMENT)
+            {
+                // Found a start tag
+                if(eventType == XmlPullParser.START_TAG)
+                {
+                    // Check which Tag we have
+                    if (xpp.getName().equalsIgnoreCase("widgetcollection"))
+                    {
+                        alist  = new LinkedList<WidgetClass>();
+                    }
+                    else
+                    if (xpp.getName().equalsIgnoreCase("widget"))
+                    {
+                        Log.e("MyTag","Item Start Tag found");
+                        widget = new WidgetClass();
+                    }
+                    else
+                    if (xpp.getName().equalsIgnoreCase("Title"))
+                    {
+                        // Now just get the associated text
+                        String temp = xpp.nextText();
+                        // Do something with text
+                        Log.e("MyTag","Title is " + temp);
+                        widget.setTitle(temp);
+                    }
+                    else
+                        // Check which Tag we have
+                        if (xpp.getName().equalsIgnoreCase("Description"))
+                        {
+                            // Now just get the associated text
+                            String temp = xpp.nextText();
+                            // Do something with text
+                            Log.e("MyTag","Description is " + temp);
+                            widget.setDescription(temp);
+                        }
+                        else
+                            // Check which Tag we have
+                            if (xpp.getName().equalsIgnoreCase("Language"))
+                            {
+                                // Now just get the associated text
+                                String temp = xpp.nextText();
+                                // Do something with text
+                                Log.e("MyTag","Language is " + temp);
+                                widget.setLanguage(temp);
+                            }
+                            else
+                                // Check which Tag we have
+                                if (xpp.getName().equalsIgnoreCase("Last Build Date"))
+                                {
+                                    // Now just get the associated text
+                                    String temp = xpp.nextText();
+                                    // Do something with text
+                                    Log.e("MyTag","LastBuildDate is " + temp);
+                                    widget.setLastBuildDate(temp);
+                                }
+                }
+                else
+                if(eventType == XmlPullParser.END_TAG)
+                {
+                    if (xpp.getName().equalsIgnoreCase("widget"))
+                    {
+                        Log.e("MyTag","widget is " + widget.toString());
+                        alist.add(widget);
+                    }
+                    else
+                    if (xpp.getName().equalsIgnoreCase("widgetcollection"))
+                    {
+                        int size;
+                        size = alist.size();
+                        Log.e("MyTag","widgetcollection size is " + size);
+                    }
+                }
+
+
+                // Get the next event
+                eventType = xpp.next();
+
+            } // End of while
+
+            //return alist;
+        }
+        catch (XmlPullParserException ae1)
+        {
+            Log.e("MyTag","Parsing error" + ae1.toString());
+        }
+        catch (IOException ae1)
+        {
+            Log.e("MyTag","IO error during parsing");
+        }
+
+        Log.e("MyTag","End document");
+
+        return alist;
+
+    }
 
     // Need separate thread to access the internet resource over network
     // Other neater solutions should be adopted in later iterations.
